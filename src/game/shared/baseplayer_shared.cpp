@@ -319,8 +319,8 @@ void CBasePlayer::ItemPostFrame()
 		if( iSecondaryAmmoType >= 0 )
 		{
 			GiveAmmo(
-				GetAmmoDef()->MaxCarry( iPrimaryAmmoType ),
-				GetAmmoDef()->GetAmmoOfIndex( iPrimaryAmmoType )->pName,
+				GetAmmoDef()->MaxCarry( iSecondaryAmmoType ),
+				GetAmmoDef()->GetAmmoOfIndex( iSecondaryAmmoType )->pName,
 				true
 			);
 		}
