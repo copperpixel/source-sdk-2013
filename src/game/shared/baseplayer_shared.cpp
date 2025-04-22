@@ -58,7 +58,7 @@
 #include "tier0/memdbgon.h"
 
 #if defined(GAME_DLL)
-	ConVar sv_infinite_ammo( "sv_infinite_ammo", "0", FCVAR_CHEAT, "Player's active weapon will never run out of ammo" );
+	ConVar sv_infinite_ammo( "sv_infinite_ammo", "0", FCVAR_CHEAT, "Player's active weapon will never run out of ammo. If set to 2 then player has infinite total ammo but still has to reload the magazine." );
 #if !defined(_XBOX)
 	extern ConVar sv_pushaway_max_force;
 	extern ConVar sv_pushaway_force;
@@ -298,13 +298,17 @@ void CBasePlayer::ItemPostFrame()
 	{
 		CBaseCombatWeapon* pWeapon = GetActiveWeapon();
 
-		pWeapon->m_iClip1 = pWeapon->GetMaxClip1();
-		pWeapon->m_iClip2 = pWeapon->GetMaxClip2();
+		// dont give clip ammo if set higher than 1 -copperpixel
+		if( sv_infinite_ammo.GetInt() == 1 )
+		{
+			pWeapon->m_iClip1 = pWeapon->GetMaxClip1();
+			pWeapon->m_iClip2 = pWeapon->GetMaxClip2();
+		}
 
 		int iPrimaryAmmoType = pWeapon->GetPrimaryAmmoType();
 		if( iPrimaryAmmoType >= 0 )
 		{
-			GiveAmmo( 
+			GiveAmmo(
 				GetAmmoDef()->MaxCarry( iPrimaryAmmoType ),
 				GetAmmoDef()->GetAmmoOfIndex( iPrimaryAmmoType )->pName,
 				true
