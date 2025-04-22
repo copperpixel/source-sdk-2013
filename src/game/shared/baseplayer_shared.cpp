@@ -299,14 +299,27 @@ void CBasePlayer::ItemPostFrame()
 		CBaseCombatWeapon* pWeapon = GetActiveWeapon();
 
 		pWeapon->m_iClip1 = pWeapon->GetMaxClip1();
+		pWeapon->m_iClip2 = pWeapon->GetMaxClip2();
+
 		int iPrimaryAmmoType = pWeapon->GetPrimaryAmmoType();
 		if( iPrimaryAmmoType >= 0 )
-			SetAmmoCount( GetAmmoDef()->MaxCarry( iPrimaryAmmoType ), iPrimaryAmmoType );
+		{
+			GiveAmmo( 
+				GetAmmoDef()->MaxCarry( iPrimaryAmmoType ),
+				GetAmmoDef()->GetAmmoOfIndex( iPrimaryAmmoType )->pName,
+				true
+			);
+		}
 
-		pWeapon->m_iClip2 = pWeapon->GetMaxClip2();
 		int iSecondaryAmmoType = pWeapon->GetSecondaryAmmoType();
 		if( iSecondaryAmmoType >= 0 )
-			SetAmmoCount( GetAmmoDef()->MaxCarry( iSecondaryAmmoType ), iSecondaryAmmoType );
+		{
+			GiveAmmo(
+				GetAmmoDef()->MaxCarry( iPrimaryAmmoType ),
+				GetAmmoDef()->GetAmmoOfIndex( iPrimaryAmmoType )->pName,
+				true
+			);
+		}
 	}
 #else
 	// NOTE: If we ever support full impulse commands on the client,
