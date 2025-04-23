@@ -330,12 +330,12 @@ void CBasePlayer::ItemPostFrame()
 		CTFPlayer* pTFPlayer = ToTFPlayer( this );
 		if( pTFPlayer )
 		{
-			pTFPlayer->GiveAmmo( 200, TF_AMMO_METAL, false );		// metal
-			pTFPlayer->m_Shared.AddToSpyCloakMeter( 100.0f, true ); // spy cloak
-			pTFPlayer->AddToSpyKnife( 100.0f, true );				// spy-cicle recharge 
-			pTFPlayer->m_Shared.SetDemomanChargeMeter( 100.0f );	// shields charge
-			pTFPlayer->m_Shared.SetScoutEnergyDrinkMeter( 100.0f ); // bonk/crit-a-cola
-			pTFPlayer->m_Shared.SetScoutHypeMeter( 100.0f );		// soda popper hype
+			pTFPlayer->GiveAmmo( 200, TF_AMMO_METAL, true );			// metal
+			pTFPlayer->m_Shared.AddToSpyCloakMeter( 100.0f, true );		// spy cloak
+			pTFPlayer->AddToSpyKnife( 100.0f, true );					// spy-cicle recharge 
+			pTFPlayer->m_Shared.SetDemomanChargeMeter( 100.0f );		// shields charge
+			pTFPlayer->m_Shared.SetScoutEnergyDrinkMeter( 100.0f );		// bonk/crit-a-cola
+			pTFPlayer->m_Shared.SetScoutHypeMeter( 100.0f );			// soda popper hype
 		}
 #endif
 	}
