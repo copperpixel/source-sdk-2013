@@ -301,8 +301,21 @@ void CBasePlayer::ItemPostFrame()
 		// dont give clip ammo if set higher than 1 -copperpixel
 		if( sv_infinite_ammo.GetInt() == 1 )
 		{
+#ifdef TF_DLL
+			CTFWeaponBase* pTFWeapon = static_cast< CTFWeaponBase* >( pWeapon );
+			if( pTFWeapon->IsEnergyWeapon() )
+			{
+				pTFWeapon->Energy_SetEnergy( pTFWeapon->Energy_GetMaxEnergy() );
+			}
+			else
+			{
+				pTFWeapon->m_iClip1 = pTFWeapon->GetMaxClip1();
+				pTFWeapon->m_iClip2 = pTFWeapon->GetMaxClip2();
+			}
+#else
 			pWeapon->m_iClip1 = pWeapon->GetMaxClip1();
 			pWeapon->m_iClip2 = pWeapon->GetMaxClip2();
+#endif
 		}
 
 		int iPrimaryAmmoType = pWeapon->GetPrimaryAmmoType();
