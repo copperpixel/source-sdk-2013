@@ -471,6 +471,7 @@ $Project
 		$File	"movehelper_server.h"
 		$File	"movement.cpp"
 		$File	"$SRCDIR\game\shared\movevars_shared.cpp"
+		$File 	"movie_display.cpp"
 		$File	"movie_explosion.h"
 		$File	"$SRCDIR\game\shared\multiplay_gamerules.cpp"
 		$File	"$SRCDIR\game\shared\multiplay_gamerules.h"
