@@ -298,19 +298,22 @@ void CBasePlayer::ItemPostFrame()
 	{
 		CBaseCombatWeapon* pWeapon = GetActiveWeapon();
 
-		// dont give clip ammo if set higher than 1 -copperpixel
+		// only refill clip when sv_infinite_ammo == 1 -copperpixel
 		if( sv_infinite_ammo.GetInt() == 1 )
 		{
 #ifdef TF_DLL
-			CTFWeaponBase* pTFWeapon = static_cast< CTFWeaponBase* >( pWeapon );
-			if( pTFWeapon->IsEnergyWeapon() )
+			CTFWeaponBase* pTFWeapon = dynamic_cast< CTFWeaponBase* >( pWeapon );
+			if( pTFWeapon )
 			{
-				pTFWeapon->Energy_SetEnergy( pTFWeapon->Energy_GetMaxEnergy() );
-			}
-			else
-			{
-				pTFWeapon->m_iClip1 = pTFWeapon->GetMaxClip1();
-				pTFWeapon->m_iClip2 = pTFWeapon->GetMaxClip2();
+				if( pTFWeapon->IsEnergyWeapon() )
+				{
+					pTFWeapon->WeaponRegenerate();
+				}
+				else
+				{
+					pTFWeapon->m_iClip1 = pTFWeapon->GetMaxClip1();
+					pTFWeapon->m_iClip2 = pTFWeapon->GetMaxClip2();
+				}
 			}
 #else
 			pWeapon->m_iClip1 = pWeapon->GetMaxClip1();
@@ -343,12 +346,16 @@ void CBasePlayer::ItemPostFrame()
 		CTFPlayer* pTFPlayer = ToTFPlayer( this );
 		if( pTFPlayer )
 		{
-			pTFPlayer->GiveAmmo( 200, TF_AMMO_METAL, true );			// metal
-			pTFPlayer->m_Shared.AddToSpyCloakMeter( 100.0f, true );		// spy cloak
-			pTFPlayer->AddToSpyKnife( 100.0f, true );					// spy-cicle recharge 
-			pTFPlayer->m_Shared.SetDemomanChargeMeter( 100.0f );		// shields charge
-			pTFPlayer->m_Shared.SetScoutEnergyDrinkMeter( 100.0f );		// bonk/crit-a-cola
-			pTFPlayer->m_Shared.SetScoutHypeMeter( 100.0f );			// soda popper hype
+			pTFPlayer->GiveAmmo( pTFPlayer->GetMaxAmmo( TF_AMMO_METAL ), TF_AMMO_METAL, true, kAmmoSource_Resupply );
+			pTFPlayer->AddToSpyKnife( 100.0f, true );
+			pTFPlayer->m_Shared.SetSpyCloakMeter( 100.0f );
+			pTFPlayer->m_Shared.SetScoutHypeMeter( 100.0f );
+			pTFPlayer->m_Shared.SetDemomanChargeMeter( 100.0f );
+			pTFPlayer->m_Shared.SetRageMeter( 100.f );
+			for( int i = FIRST_LOADOUT_SLOT_WITH_CHARGE_METER; i <= LAST_LOADOUT_SLOT_WITH_CHARGE_METER; ++i )
+			{
+				pTFPlayer->m_Shared.SetItemChargeMeter( ( loadout_positions_t )i, 100.f );
+			}
 		}
 #endif
 	}
