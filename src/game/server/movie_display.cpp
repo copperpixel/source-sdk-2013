@@ -33,10 +33,8 @@ public:
 	void	Disable( void );
 	void	Enable( void );
 
-	void	InputDisable( inputdata_t& inputdata );
-	void	InputEnable( inputdata_t& inputdata );
-
-	void	InputSetDisplayText( inputdata_t& inputdata );
+	void	PauseMovie( void );
+	void	UnpauseMovie( void );
 
 private:
 	// Control panel
@@ -47,18 +45,18 @@ private:
 
 private:
 	CNetworkVar( bool, m_bEnabled );
-	CNetworkVar( bool, m_bLooping );
-
-	CNetworkString( m_szDisplayText, 128 );
+	CNetworkVar( bool, m_bPlaying );
+	CNetworkVar( bool, m_bAutoStart );
+	CNetworkVar( bool, m_bLooping );	
 
 	// Filename of the movie to play
 	CNetworkString( m_szMovieFilename, 128 );
-	string_t	m_strMovieFilename;
+	string_t	m_iszMovieFilename;
 
 	// "Group" name.  Screens of the same group name will play the same movie at the same time
 	// Effectively this lets multiple screens tune to the same "channel" in the world
 	CNetworkString( m_szGroupName, 128 );
-	string_t	m_strGroupName;
+	string_t	m_iszGroupName;
 
 	int			m_iScreenWidth;
 	int			m_iScreenHeight;
@@ -66,6 +64,13 @@ private:
 	bool		m_bDoFullTransmit;
 
 	CHandle< CVGuiScreen >	m_hScreen;
+
+public:
+	// Input handlers
+	void	InputDisable( inputdata_t& inputdata );
+	void	InputEnable( inputdata_t& inputdata );
+	void	InputPause( inputdata_t& inputdata );
+	void	InputUnpause( inputdata_t& inputdata );
 };
 
 LINK_ENTITY_TO_CLASS( vgui_movie_display, CMovieDisplay );
@@ -77,16 +82,16 @@ BEGIN_DATADESC( CMovieDisplay )
 
 DEFINE_FIELD( m_bEnabled, FIELD_BOOLEAN ),
 
-DEFINE_AUTO_ARRAY_KEYFIELD( m_szDisplayText, FIELD_CHARACTER, "displaytext" ),
-
 DEFINE_AUTO_ARRAY( m_szMovieFilename, FIELD_CHARACTER ),
-DEFINE_KEYFIELD( m_strMovieFilename, FIELD_STRING, "moviefilename" ),
+DEFINE_KEYFIELD( m_iszMovieFilename, FIELD_STRING, "moviefilename" ),
 
 DEFINE_AUTO_ARRAY( m_szGroupName, FIELD_CHARACTER ),
-DEFINE_KEYFIELD( m_strGroupName, FIELD_STRING, "groupname" ),
+DEFINE_KEYFIELD( m_iszGroupName, FIELD_STRING, "groupname" ),
 
 DEFINE_KEYFIELD( m_iScreenWidth, FIELD_INTEGER, "width" ),
 DEFINE_KEYFIELD( m_iScreenHeight, FIELD_INTEGER, "height" ),
+
+DEFINE_KEYFIELD( m_bAutoStart, FIELD_BOOLEAN, "autostart" ),
 DEFINE_KEYFIELD( m_bLooping, FIELD_BOOLEAN, "looping" ),
 
 DEFINE_FIELD( m_bDoFullTransmit, FIELD_BOOLEAN ),
@@ -95,13 +100,15 @@ DEFINE_FIELD( m_hScreen, FIELD_EHANDLE ),
 
 DEFINE_INPUTFUNC( FIELD_VOID, "Disable", InputDisable ),
 DEFINE_INPUTFUNC( FIELD_VOID, "Enable", InputEnable ),
-
-DEFINE_INPUTFUNC( FIELD_STRING, "SetDisplayText", InputSetDisplayText ),
+DEFINE_INPUTFUNC( FIELD_VOID, "PauseMovie", InputPause ),
+DEFINE_INPUTFUNC( FIELD_VOID, "UnpauseMovie", InputUnpause ),
 
 END_DATADESC()
 
 IMPLEMENT_SERVERCLASS_ST( CMovieDisplay, DT_MovieDisplay )
 SendPropBool( SENDINFO( m_bEnabled ) ),
+SendPropBool( SENDINFO( m_bPlaying ) ),
+SendPropBool( SENDINFO( m_bAutoStart ) ),
 SendPropBool( SENDINFO( m_bLooping ) ),
 SendPropString( SENDINFO( m_szMovieFilename ) ),
 SendPropString( SENDINFO( m_szGroupName ) ),
@@ -113,19 +120,19 @@ CMovieDisplay::~CMovieDisplay()
 }
 
 //-----------------------------------------------------------------------------
-// Read in Hammer data
+// Purpose: Read in Hammer data
 //-----------------------------------------------------------------------------
 bool CMovieDisplay::KeyValue( const char* szKeyName, const char* szValue )
 {
-	// NOTE: Have to do these separate because they set two values instead of one
+	// Purpose: NOTE: Have to do these separate because they set two values instead of one
 	if( FStrEq( szKeyName, "angles" ) )
 	{
 		Assert( GetMoveParent() == NULL );
 		QAngle angles;
 		UTIL_StringToVector( angles.Base(), szValue );
 
-		// Because the vgui screen basis is strange (z is front, y is up, x is right)
-		// we need to rotate the typical basis before applying it
+		// Purpose: Because the vgui screen basis is strange (z is front, y is up, x is right)
+		// Purpose: we need to rotate the typical basis before applying it
 		VMatrix mat, rotation, tmp;
 		MatrixFromAngles( angles, mat );
 		MatrixBuildRotationAboutAxis( rotation, Vector( 0, 1, 0 ), 90 );
@@ -142,7 +149,7 @@ bool CMovieDisplay::KeyValue( const char* szKeyName, const char* szValue )
 }
 
 //-----------------------------------------------------------------------------
-// 
+// Purpose: 
 //-----------------------------------------------------------------------------
 int CMovieDisplay::UpdateTransmitState()
 {
@@ -156,28 +163,28 @@ int CMovieDisplay::UpdateTransmitState()
 }
 
 //-----------------------------------------------------------------------------
-// 
+// Purpose: 
 //-----------------------------------------------------------------------------
 void CMovieDisplay::SetTransmit( CCheckTransmitInfo* pInfo, bool bAlways )
 {
-	// Are we already marked for transmission?
+	// Purpose: Are we already marked for transmission?
 	if( pInfo->m_pTransmitEdict->Get( entindex() ) )
 		return;
 
 	BaseClass::SetTransmit( pInfo, bAlways );
 
-	// Force our screen to be sent too.
+	// Purpose: Force our screen to be sent too.
 	m_hScreen->SetTransmit( pInfo, bAlways );
 }
 
 //-----------------------------------------------------------------------------
-// 
+// Purpose: 
 //-----------------------------------------------------------------------------
 void CMovieDisplay::Spawn( void )
 {
-	// Move the strings into a networkable form
-	Q_strcpy( m_szMovieFilename.GetForModify(), m_strMovieFilename.ToCStr() );
-	Q_strcpy( m_szGroupName.GetForModify(), m_strGroupName.ToCStr() );
+	// Purpose: Move the strings into a networkable form
+	Q_strcpy( m_szMovieFilename.GetForModify(), m_iszMovieFilename.ToCStr() );
+	Q_strcpy( m_szGroupName.GetForModify(), m_iszGroupName.ToCStr() );
 
 	Precache();
 
@@ -193,7 +200,7 @@ void CMovieDisplay::Spawn( void )
 }
 
 //-----------------------------------------------------------------------------
-// 
+// Purpose: 
 //-----------------------------------------------------------------------------
 void CMovieDisplay::Precache( void )
 {
@@ -203,7 +210,7 @@ void CMovieDisplay::Precache( void )
 }
 
 //-----------------------------------------------------------------------------
-// 
+// Purpose: 
 //-----------------------------------------------------------------------------
 void CMovieDisplay::OnRestore( void )
 {
@@ -215,11 +222,11 @@ void CMovieDisplay::OnRestore( void )
 }
 
 //-----------------------------------------------------------------------------
-// 
+// Purpose: 
 //-----------------------------------------------------------------------------
 void CMovieDisplay::ScreenVisible( bool bVisible )
 {
-	// Set its active state
+	// Purpose: Set its active state
 	m_hScreen->SetActive( bVisible );
 
 	if( bVisible )
@@ -233,7 +240,7 @@ void CMovieDisplay::ScreenVisible( bool bVisible )
 }
 
 //-----------------------------------------------------------------------------
-// 
+// Purpose: 
 //-----------------------------------------------------------------------------
 void CMovieDisplay::Disable( void )
 {
@@ -246,7 +253,7 @@ void CMovieDisplay::Disable( void )
 }
 
 //-----------------------------------------------------------------------------
-// 
+// Purpose: 
 //-----------------------------------------------------------------------------
 void CMovieDisplay::Enable( void )
 {
@@ -259,31 +266,29 @@ void CMovieDisplay::Enable( void )
 }
 
 //-----------------------------------------------------------------------------
-// 
+// Purpose: 
 //-----------------------------------------------------------------------------
-void CMovieDisplay::InputDisable( inputdata_t& inputdata )
+void CMovieDisplay::PauseMovie( void )
 {
-	Disable();
+	if( !m_bPlaying )
+		return;
+
+	m_bPlaying = false;
 }
 
 //-----------------------------------------------------------------------------
-// 
+// Purpose: 
 //-----------------------------------------------------------------------------
-void CMovieDisplay::InputEnable( inputdata_t& inputdata )
+void CMovieDisplay::UnpauseMovie( void )
 {
-	Enable();
+	if( m_bPlaying )
+		return;
+
+	m_bPlaying = true;
 }
 
 //-----------------------------------------------------------------------------
-// 
-//-----------------------------------------------------------------------------
-void CMovieDisplay::InputSetDisplayText( inputdata_t& inputdata )
-{
-	Q_strcpy( m_szDisplayText.GetForModify(), inputdata.value.String() );
-}
-
-//-----------------------------------------------------------------------------
-// 
+// Purpose: 
 //-----------------------------------------------------------------------------
 void CMovieDisplay::GetControlPanelInfo( int nPanelIndex, const char*& pPanelName )
 {
@@ -291,7 +296,7 @@ void CMovieDisplay::GetControlPanelInfo( int nPanelIndex, const char*& pPanelNam
 }
 
 //-----------------------------------------------------------------------------
-// 
+// Purpose: 
 //-----------------------------------------------------------------------------
 void CMovieDisplay::GetControlPanelClassName( int nPanelIndex, const char*& pPanelName )
 {
@@ -299,7 +304,7 @@ void CMovieDisplay::GetControlPanelClassName( int nPanelIndex, const char*& pPan
 }
 
 //-----------------------------------------------------------------------------
-// This is called by the base object when it's time to spawn the control panels
+// Purpose: This is called by the base object when it's time to spawn the control panels
 //-----------------------------------------------------------------------------
 void CMovieDisplay::SpawnControlPanels()
 {
@@ -334,7 +339,7 @@ void CMovieDisplay::SpawnControlPanels()
 }
 
 //-----------------------------------------------------------------------------
-// 
+// Purpose: 
 //-----------------------------------------------------------------------------
 void CMovieDisplay::RestoreControlPanels( void )
 {
@@ -366,4 +371,36 @@ void CMovieDisplay::RestoreControlPanels( void )
 
 		return;
 	}
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CMovieDisplay::InputDisable( inputdata_t& inputdata )
+{
+	Disable();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CMovieDisplay::InputEnable( inputdata_t& inputdata )
+{
+	Enable();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CMovieDisplay::InputPause( inputdata_t& inputdata )
+{
+	PauseMovie();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CMovieDisplay::InputUnpause( inputdata_t& inputdata )
+{
+	UnpauseMovie();
 }

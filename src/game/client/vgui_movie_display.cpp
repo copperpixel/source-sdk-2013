@@ -249,8 +249,8 @@ void CMovieDisplayScreen::UpdateMovie( void )
 	// Get the current activity state of the screen
 	bool bScreenActive = IsActive();
 
-	// Pause if the game has paused
-	if( engine->IsPaused() || engine->Con_IsVisible() )
+	// Pause if the game has paused (only in singleplayer)
+	if( gpGlobals->maxClients == 1 && ( engine->IsPaused() || engine->Con_IsVisible() ) )
 	{
 		bScreenActive = false;
 	}
@@ -352,12 +352,17 @@ bool CMovieDisplayScreen::BeginPlayback( const char* pFilename )
 
 	// Load and create our video
 	VideoPlaybackFlags_t flags = VideoPlaybackFlags::DEFAULT_MATERIAL_OPTIONS;
+	if( m_hScreenEntity->IsLooping() )
+		flags |= VideoPlaybackFlags::LOOP_VIDEO;
+	if( !m_hScreenEntity->IsAutoStart() )
+		flags |= VideoPlaybackFlags::DONT_AUTO_START_VIDEO;
+
+	Msg( "Autostart: %i\n", m_hScreenEntity->IsAutoStart() );
+
 
 	m_pVideoMaterial = g_pVideo->CreateVideoMaterial( szMaterialName, pFilename, "GAME", flags, VideoSystem::DETERMINE_FROM_FILE_EXTENSION, true );
 	if( !m_pVideoMaterial )
 		return false;
-
-	m_pVideoMaterial->SetLooping( true );
 
 	if( ( flags & VideoPlaybackFlags::NO_AUDIO ) != 0 )
 	{

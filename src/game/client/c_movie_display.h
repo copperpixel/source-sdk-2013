@@ -19,6 +19,8 @@ public:
 	~C_MovieDisplay();
 
 	bool IsEnabled( void ) const { return m_bEnabled; }
+	bool IsPlaying( void ) const { return m_bPlaying; }
+	bool IsAutoStart( void ) const { return m_bAutoStart; }
 	bool IsLooping( void ) const { return m_bLooping; }
 
 	const char* GetMovieFilename( void ) const { return m_szMovieFilename; }
@@ -26,7 +28,10 @@ public:
 
 private:
 	bool	m_bEnabled;
+	bool	m_bPlaying;
+	bool	m_bAutoStart;
 	bool	m_bLooping;
+
 	char	m_szMovieFilename[ 128 ];
 	char	m_szGroupName[ 128 ];
 };
