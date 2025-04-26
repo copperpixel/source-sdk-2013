@@ -249,6 +249,12 @@ void CMovieDisplayScreen::UpdateMovie( void )
 	// Get the current activity state of the screen
 	bool bScreenActive = IsActive();
 
+	// Pause if the entity was set to not play
+	if( !m_hScreenEntity->IsPlaying() )
+	{
+		bScreenActive = false;
+	}
+
 	// Pause if the game has paused (only in singleplayer)
 	if( gpGlobals->maxClients == 1 && ( engine->IsPaused() || engine->Con_IsVisible() ) )
 	{
@@ -280,6 +286,17 @@ void CMovieDisplayScreen::UpdateMovie( void )
 			// Issue a close command
 			// OnVideoOver();
 			// StopPlayback();
+			return;
+		}
+
+		// HACK: Looping videos in IVideoServices doesn't work (see #792) so we need to use this workaround
+		if( m_hScreenEntity->IsLooping() )
+		{
+			float flCurTime = m_pVideoMaterial->GetCurrentVideoTime();
+			float flDurTime = m_pVideoMaterial->GetVideoDuration();
+
+			if( ( flCurTime + .1f ) >= flDurTime )
+				m_pVideoMaterial->SetTime( .0f );
 		}
 	}
 }
@@ -354,15 +371,16 @@ bool CMovieDisplayScreen::BeginPlayback( const char* pFilename )
 	VideoPlaybackFlags_t flags = VideoPlaybackFlags::DEFAULT_MATERIAL_OPTIONS;
 	if( m_hScreenEntity->IsLooping() )
 		flags |= VideoPlaybackFlags::LOOP_VIDEO;
-	if( !m_hScreenEntity->IsAutoStart() )
-		flags |= VideoPlaybackFlags::DONT_AUTO_START_VIDEO;
-
-	Msg( "Autostart: %i\n", m_hScreenEntity->IsAutoStart() );
-
 
 	m_pVideoMaterial = g_pVideo->CreateVideoMaterial( szMaterialName, pFilename, "GAME", flags, VideoSystem::DETERMINE_FROM_FILE_EXTENSION, true );
 	if( !m_pVideoMaterial )
+	{
+		Warning( "Failed to create video material for %s\nResult: %i\n", szMaterialName, g_pVideo->GetLastResult() );
 		return false;
+	}
+
+	if( !m_hScreenEntity->IsAutoStart() )
+		m_pVideoMaterial->SetPaused( true );
 
 	if( ( flags & VideoPlaybackFlags::NO_AUDIO ) != 0 )
 	{
