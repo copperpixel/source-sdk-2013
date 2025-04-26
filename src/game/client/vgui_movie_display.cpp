@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2009, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2009, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -6,8 +6,8 @@
 
 #include "cbase.h"
 #include "engine/IEngineSound.h"
-#include <vgui/IVGUI.h>
-#include "VGUIMatSurface/IMatSystemSurface.h"
+#include <vgui/IVGui.h>
+#include "VGuiMatSurface/IMatSystemSurface.h"
 #include "video/ivideoservices.h"
 #include "c_vguiscreen.h"
 
