@@ -698,6 +698,8 @@ void CTFAdvancedOptionsDialog::ApplySchemeSettings( vgui::IScheme *pScheme )
 	LoadControlSettings("resource/ui/TFAdvancedOptionsDialog.res");
 	m_pListPanel->SetFirstColumnWidth( 0 );
 
+	m_pFilterPanel->SetMaximumCharCount( 32 );
+
 	CreateControls();
 }
 
@@ -729,66 +731,71 @@ void CTFAdvancedOptionsDialog::OnMessage( const KeyValues* pParams, vgui::VPANEL
 	if( !Q_stricmp( pParams->GetName(), "TextChanged" )
 		&& fromPanel == m_pFilterPanel->GetVPanel() )
 	{
-		char szBuffer[ 256 ];
+		char szBuffer[ 32 ];
 		m_pFilterPanel->GetText( szBuffer, sizeof( szBuffer ) );
 
-		// make everything visible if the field is empty
+		// Make everything visible if the filter field is empty
 		if( !Q_strcmp( szBuffer, "" ) )
 		{
 			mpcontrol_t* pList = m_pList;
 			while( pList )
 			{
 				pList->SetVisible( true );
-
-				if( pList->type != O_SLIDER )
-					pList->SetSize( m_iControlW, m_iControlH );
-				else
-					pList->SetSize( m_iSliderW, m_iSliderH );
-
 				pList = pList->next;
 			}
 			m_pListPanel->InvalidateLayout();
 			return;
 		}
 
+		bool bCategoryVisible = false;
+		mpcontrol_t* pCurrentCategory = NULL;
 		mpcontrol_t* pList = m_pList;
 		while( pList )
 		{
-			if( pList->pControl )
+			char szDisplayText[ 32 ];
+
+			switch( pList->type )
 			{
-				char szDisplayText[ 256 ];
+			case O_CATEGORY:
+				// When a new category is hit, we hide the previous one if it has no visible elements
+				if( pCurrentCategory )
+					pCurrentCategory->SetVisible( bCategoryVisible );
 
-				switch( pList->type )
-				{
-				case O_BOOL:
-				case O_BUTTON:
-				{
-					Label* pLabel = ( Label* )pList->pControl;
-					pLabel->GetText( szDisplayText, sizeof( szDisplayText ) );
-					break;
-				}
-				default:
-					pList->pPrompt->GetText( szDisplayText, sizeof( szDisplayText ) );
-					break;
-				}
+				// Set the current category to the new one and iterate to the next panel
+				bCategoryVisible = false;
+				pCurrentCategory = pList;
+				pList = pList->next;
+				continue;
+			case O_BOOL:
+			case O_BUTTON:
+			{
+				// Checkboxes and buttons handle display text themselves
+				Label* pLabel = ( Label* )pList->pControl;
+				pLabel->GetText( szDisplayText, sizeof( szDisplayText ) );
+				break;
+			}
+			default:
+				pList->pPrompt->GetText( szDisplayText, sizeof( szDisplayText ) );
+				break;
+			}
 
-				if( !Q_stristr( szDisplayText, szBuffer ) )
-				{
-					pList->SetVisible( false );
-					pList->SetSize( 0, 0 ); // PanelListPanel calculates the spacing based on size of items
-				}
-				else
-				{
-					pList->SetVisible( true );
-					if( pList->type != O_SLIDER )
-						pList->SetSize( m_iControlW, m_iControlH );
-					else
-						pList->SetSize( m_iSliderW, m_iSliderH );
-				}
+			if( !Q_stristr( szDisplayText, szBuffer ) )
+			{
+				pList->SetVisible( false );
+			}
+			else
+			{
+				pList->SetVisible( true );
+				bCategoryVisible = true;
 			}
 
 			pList = pList->next;
 		}
+
+		// We need to do this check again in case there was no new category
+		if( pCurrentCategory )
+			pCurrentCategory->SetVisible( bCategoryVisible );
+
 		m_pListPanel->InvalidateLayout();
 		return;
 	}
