@@ -11,12 +11,14 @@
 $Group "gamedlls"
 {
 	"client"
+	"gamepadui"
 	"server"
 }
 
 $Group "game"
 {
 	"client"
+	"gamepadui"
 	"launcher_main"
 	"mathlib"
 	"raytrace"
@@ -36,6 +38,7 @@ $Group "everything"
 	"captioncompiler"
 	"client"
 	"fgdlib"
+	"gamepadui"
 	"glview"
 	"height2normal"
 	"launcher_main"

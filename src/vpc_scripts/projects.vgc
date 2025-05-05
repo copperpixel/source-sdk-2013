@@ -38,6 +38,14 @@ $Project "game_shader_generic_std"
 	"materialsystem\stdshaders\game_shader_generic_std_tf.vpc" [$TF]
 }
 
+$Project "gamepadui"
+{
+	"game\gamepadui\gamepadui_cstrike.vpc"	[$CSTRIKE]
+	"game\gamepadui\gamepadui_dod.vpc"		[$DOD]
+	"game\gamepadui\gamepadui_hl1mp.vpc"	[$HL1MP]
+	"game\gamepadui\gamepadui_hl2mp.vpc"	[$HL2MP]
+}
+
 $Project "glview"
 {
 	"utils\glview\glview.vpc" [$WINDOWS]
