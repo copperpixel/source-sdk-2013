@@ -7,6 +7,7 @@
 #include "cbase.h"
 #include "engine/IEngineSound.h"
 #include <vgui/IVGui.h>
+#include <vgui_controls/Label.h>
 #include "VGuiMatSurface/IMatSystemSurface.h"
 #include "video/ivideoservices.h"
 #include "c_vguiscreen.h"
@@ -17,6 +18,8 @@
 #include "tier0/memdbgon.h"
 
 using namespace vgui;
+
+static ConVar cl_movie_display_debug_overlay( "cl_movie_display_debug_overlay", "0", FCVAR_CHEAT, "Enable debug overlay for VGUI movie displays" );
 
 struct VideoPlaybackInfo_t
 {
@@ -75,8 +78,12 @@ private:
 	bool			m_bBlackBackground;
 	bool			m_bSlaved;
 	bool			m_bInitialized;
+	bool			m_bSynchronized;
 
 	bool			m_bLastActiveState;		// HACK: I'd rather get a real callback...
+
+	// VGUI controls
+	Label*			m_pDebugLabel;
 };
 
 DECLARE_VGUI_SCREEN_FACTORY( CMovieDisplayScreen, "movie_display_screen" );
@@ -87,7 +94,6 @@ static CUtlVector< CMovieDisplayScreen* > s_movieDisplays;
 // Purpose: Constructor
 //-----------------------------------------------------------------------------
 CMovieDisplayScreen::CMovieDisplayScreen( vgui::Panel* parent, const char* panelName )
-	//: BaseClass( parent, "CMovieDisplayScreen", vgui::scheme()->LoadSchemeFromFileEx( enginevgui->GetPanel( PANEL_CLIENTDLL ), "resource/MovieDisplayScreen.res", "MovieDisplayScreen" ) )
 	: BaseClass( parent, "CMovieDisplayScreen" )
 {
 	m_pVideoMaterial = NULL;
@@ -95,6 +101,9 @@ CMovieDisplayScreen::CMovieDisplayScreen( vgui::Panel* parent, const char* panel
 	m_bBlackBackground = true;
 	m_bSlaved = false;
 	m_bInitialized = false;
+	m_bSynchronized = false;
+
+	m_pDebugLabel = new Label( this, "", "" );
 
 	// Add ourselves to the global list of movie displays
 	s_movieDisplays.AddToTail( this );
@@ -125,7 +134,16 @@ CMovieDisplayScreen::~CMovieDisplayScreen( void )
 //-----------------------------------------------------------------------------
 void CMovieDisplayScreen::ApplySchemeSettings( IScheme* pScheme )
 {
-	assert( pScheme );
+	BaseClass::ApplySchemeSettings( pScheme );
+
+	// Draw the debug overlay
+	if( cl_movie_display_debug_overlay.GetBool() )
+	{
+		m_pDebugLabel->SetFont( pScheme->GetFont( "DefaultSmall" ) );
+		m_pDebugLabel->SetPos( 0, 0 );
+
+		m_pDebugLabel->SizeToContents();
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -280,6 +298,26 @@ void CMovieDisplayScreen::UpdateMovie( void )
 	// Update the frame if we're currently enabled
 	if( bScreenActive )
 	{
+		// this is dumb, but IVideoMaterial::GetVideoDuration() can return .0f sometimes just
+		// after the video is created, which is why we can't just put this in BeginPlayback
+		if( !m_bSynchronized )
+		{
+			// Sync playback with server (so that clients that joined late see the same thing)
+			float flSyncTime = gpGlobals->curtime - m_hScreenEntity->GetStartPlaybackTime();
+			float flDurTime = m_pVideoMaterial->GetVideoDuration();
+
+			if( flDurTime > .0f )
+			{
+				if( m_hScreenEntity->IsLooping() )
+					flSyncTime = fmod( flSyncTime, flDurTime );
+				else
+					flSyncTime = clamp( flSyncTime, .0f, flDurTime );
+
+				m_pVideoMaterial->SetTime( flSyncTime );
+				m_bSynchronized = true;
+			}
+		}
+
 		// Update our frame
 		if( m_pVideoMaterial->Update() == false )
 		{
@@ -313,6 +351,25 @@ void CMovieDisplayScreen::OnTick()
 
 	// Now update the movie
 	UpdateMovie();
+
+	if( cl_movie_display_debug_overlay.GetBool() )
+	{
+		float flServerCurrent = gpGlobals->curtime - m_hScreenEntity->GetStartPlaybackTime();
+		char szText[ 256 ];
+		Q_snprintf( szText, ARRAYSIZE( szText ), "Movie: %s\nGroup: %s\nCurrent: %.2f\nServer current: %.2f (%.2f)\nDuration: %.2f\nWidth: %i\nHeight: %i\nU: %.2f\nV: %.2f",
+					m_hScreenEntity->GetMovieFilename(),
+					m_hScreenEntity->GetGroupName(),
+					m_pVideoMaterial->GetCurrentVideoTime(),
+					flServerCurrent,
+					m_hScreenEntity->IsLooping() ? fmod( flServerCurrent, m_pVideoMaterial->GetVideoDuration() ) : clamp( flServerCurrent, .0f, m_pVideoMaterial->GetVideoDuration() ),
+					m_pVideoMaterial->GetVideoDuration(),
+					m_playbackInfo.m_nSourceWidth,
+					m_playbackInfo.m_nSourceHeight,
+					m_playbackInfo.m_flU,
+					m_playbackInfo.m_flV );
+
+		m_pDebugLabel->SetText( szText );
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -353,6 +410,8 @@ bool CMovieDisplayScreen::BeginPlayback( const char* pFilename )
 		m_pVideoMaterial = NULL;
 	}
 
+	m_bSynchronized = false;
+
 	// Create a globally unique name for this material
 	char szMaterialName[ 256 ];
 
@@ -368,9 +427,15 @@ bool CMovieDisplayScreen::BeginPlayback( const char* pFilename )
 	}
 
 	// Load and create our video
-	VideoPlaybackFlags_t flags = VideoPlaybackFlags::DEFAULT_MATERIAL_OPTIONS;
-	if( m_hScreenEntity->IsLooping() )
-		flags |= VideoPlaybackFlags::LOOP_VIDEO;
+	VideoPlaybackFlags_t flags = VideoPlaybackFlags::DEFAULT_MATERIAL_OPTIONS 
+							   | VideoPlaybackFlags::NO_AUDIO
+							   | VideoPlaybackFlags::PRELOAD_VIDEO;
+	// We disable audio due to certain issues like pitch distortion after using SetTime()
+	// If you want sound, separate the audio from the video and play it using an ambient_generic instead
+
+	// doesn't work, we use a workaround in UpdateMovie() instead
+	/*if( m_hScreenEntity->IsLooping() )
+		flags |= VideoPlaybackFlags::LOOP_VIDEO;*/
 
 	m_pVideoMaterial = g_pVideo->CreateVideoMaterial( szMaterialName, pFilename, "GAME", flags, VideoSystem::DETERMINE_FROM_FILE_EXTENSION, true );
 	if( !m_pVideoMaterial )

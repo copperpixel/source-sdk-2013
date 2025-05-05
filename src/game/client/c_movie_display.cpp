@@ -12,12 +12,17 @@
 #include "tier0/memdbgon.h"
 
 IMPLEMENT_CLIENTCLASS_DT( C_MovieDisplay, DT_MovieDisplay, CMovieDisplay )
+
 RecvPropBool( RECVINFO( m_bEnabled ) ),
 RecvPropBool( RECVINFO( m_bPlaying ) ),
 RecvPropBool( RECVINFO( m_bAutoStart ) ),
 RecvPropBool( RECVINFO( m_bLooping ) ),
+
+RecvPropFloat( RECVINFO( m_flStartPlaybackTime ), SPROP_NOSCALE ),
+
 RecvPropString( RECVINFO( m_szMovieFilename ) ),
 RecvPropString( RECVINFO( m_szGroupName ) ),
+
 END_RECV_TABLE()
 
 C_MovieDisplay::C_MovieDisplay()

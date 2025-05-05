@@ -23,6 +23,8 @@ public:
 	bool IsAutoStart( void ) const { return m_bAutoStart; }
 	bool IsLooping( void ) const { return m_bLooping; }
 
+	float GetStartPlaybackTime( void ) const { return m_flStartPlaybackTime; }
+
 	const char* GetMovieFilename( void ) const { return m_szMovieFilename; }
 	const char* GetGroupName( void ) const { return m_szGroupName; }
 
@@ -31,6 +33,8 @@ private:
 	bool	m_bPlaying;
 	bool	m_bAutoStart;
 	bool	m_bLooping;
+
+	float	m_flStartPlaybackTime;
 
 	char	m_szMovieFilename[ 128 ];
 	char	m_szGroupName[ 128 ];

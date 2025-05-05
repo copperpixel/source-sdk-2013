@@ -47,7 +47,10 @@ private:
 	CNetworkVar( bool, m_bEnabled );
 	CNetworkVar( bool, m_bPlaying );
 	CNetworkVar( bool, m_bAutoStart );
-	CNetworkVar( bool, m_bLooping );	
+	CNetworkVar( bool, m_bLooping );
+
+	// Server stores the start playback time so that clients that joined late can synchronize playback
+	CNetworkVar( float, m_flStartPlaybackTime );
 
 	// Filename of the movie to play
 	CNetworkString( m_szMovieFilename, 128 );
@@ -106,12 +109,17 @@ DEFINE_INPUTFUNC( FIELD_VOID, "UnpauseMovie", InputUnpause ),
 END_DATADESC()
 
 IMPLEMENT_SERVERCLASS_ST( CMovieDisplay, DT_MovieDisplay )
+
 SendPropBool( SENDINFO( m_bEnabled ) ),
 SendPropBool( SENDINFO( m_bPlaying ) ),
 SendPropBool( SENDINFO( m_bAutoStart ) ),
 SendPropBool( SENDINFO( m_bLooping ) ),
+
+SendPropFloat( SENDINFO( m_flStartPlaybackTime ), 0, SPROP_NOSCALE ),
+
 SendPropString( SENDINFO( m_szMovieFilename ) ),
 SendPropString( SENDINFO( m_szGroupName ) ),
+
 END_SEND_TABLE()
 
 CMovieDisplay::~CMovieDisplay()
@@ -191,6 +199,8 @@ void CMovieDisplay::Spawn( void )
 	BaseClass::Spawn();
 
 	m_bEnabled = false;
+
+	m_flStartPlaybackTime = gpGlobals->curtime;
 
 	SpawnControlPanels();
 
@@ -285,6 +295,7 @@ void CMovieDisplay::UnpauseMovie( void )
 		return;
 
 	m_bPlaying = true;
+	m_flStartPlaybackTime = gpGlobals->curtime;
 }
 
 //-----------------------------------------------------------------------------
@@ -323,8 +334,6 @@ void CMovieDisplay::SpawnControlPanels()
 
 		float flWidth = m_iScreenWidth;
 		float flHeight = m_iScreenHeight;
-
-		Msg( "Creating screen %s (%s) at %f x %f\n", pScreenName, pScreenClassname, flWidth, flHeight );
 
 		CVGuiScreen* pScreen = CreateVGuiScreen( pScreenClassname, pScreenName, this, this, 0 );
 		pScreen->ChangeTeam( GetTeamNumber() );
