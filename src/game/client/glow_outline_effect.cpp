@@ -24,6 +24,12 @@ extern bool g_bDumpRenderTargets; // in viewpostprocess.cpp
 
 CGlowObjectManager g_GlowObjectManager;
 
+class CGlowBrushRenderer : public IBrushRenderer
+{
+public:
+	virtual bool RenderBrushModelSurface( IClientEntity* pBaseEntity, IBrushSurface* pBrushSurface );
+};
+
 struct ShaderStencilState_t
 {
 	bool m_bEnable;
@@ -314,6 +320,11 @@ void CGlowObjectManager::GlowObjectDefinition_t::DrawModel()
 {
 	if ( m_hEntity.Get() )
 	{
+		static CGlowBrushRenderer s_glowBrushRenderer;
+
+		if( m_hEntity->IsBrushModel() )
+			render->InstallBrushSurfaceRenderer( &s_glowBrushRenderer );
+
 		m_hEntity->DrawModel( STUDIO_RENDER );
 		C_BaseEntity *pAttachment = m_hEntity->FirstMoveChild();
 
@@ -325,7 +336,41 @@ void CGlowObjectManager::GlowObjectDefinition_t::DrawModel()
 			}
 			pAttachment = pAttachment->NextMovePeer();
 		}
+
+		// reinstall normal renderer after drawing the brush model
+		if( m_hEntity->IsBrushModel() )
+			render->InstallBrushSurfaceRenderer( NULL );
 	}
+}
+
+bool CGlowBrushRenderer::RenderBrushModelSurface( IClientEntity* pBaseEntity, IBrushSurface* pBrushSurface )
+{
+	int nVertCount = pBrushSurface->GetVertexCount();
+	MEM_ALLOC_CREDIT_CLASS();
+	BrushVertex_t* pVerts = ( BrushVertex_t* )MemAlloc_AllocAligned( nVertCount * sizeof( BrushVertex_t ), sizeof( BrushVertex_t ) );
+	pBrushSurface->GetVertexData( pVerts );
+
+	CMatRenderContextPtr pRenderContext( materials );
+	IMesh* pMesh = pRenderContext->GetDynamicMesh( true, NULL, NULL, materials->FindMaterial( "dev/glow_color", TEXTURE_GROUP_OTHER, true ) );
+
+	CMeshBuilder meshBuilder;
+	meshBuilder.Begin( pMesh, MATERIAL_POLYGON, nVertCount );
+
+	for( int i = 0; i < nVertCount; i++ )
+	{
+		meshBuilder.Position3fv( pVerts[ i ].m_Pos.Base() );
+		meshBuilder.Normal3fv( pVerts[ i ].m_Normal.Base() );
+		if( pVerts[ i ].m_TangentS.IsValid() ) meshBuilder.TangentS3fv( pVerts[ i ].m_TangentS.Base() );
+		if( pVerts[ i ].m_TangentT.IsValid() ) meshBuilder.TangentT3fv( pVerts[ i ].m_TangentT.Base() );
+		meshBuilder.TexCoord2fv( 0, pVerts[ i ].m_TexCoord.Base() );
+		meshBuilder.AdvanceVertex();
+	}
+
+	meshBuilder.End();
+	pMesh->Draw();
+
+	MemAlloc_FreeAligned( pVerts );
+	return false; // don't draw decals
 }
 
 #endif // GLOWS_ENABLE
