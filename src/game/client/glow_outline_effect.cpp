@@ -323,7 +323,20 @@ void CGlowObjectManager::GlowObjectDefinition_t::DrawModel()
 		static CGlowBrushRenderer s_glowBrushRenderer;
 
 		if( m_hEntity->IsBrushModel() )
+		{
 			render->InstallBrushSurfaceRenderer( &s_glowBrushRenderer );
+
+			// HACK: we need to draw an outline for a  dummy studio model to fix brush model outlines sometimes not drawing correctly
+			static bool s_bModelSet = false;
+			static C_BaseAnimating* s_pDummy = new C_BaseAnimating();
+			if( !s_bModelSet )
+			{
+				s_pDummy->SetModel( "models/player.mdl" );
+				s_pDummy->SetModelScale( .0f );
+				s_bModelSet = true;
+			}
+			s_pDummy->DrawModel( STUDIO_RENDER );
+		}
 
 		m_hEntity->DrawModel( STUDIO_RENDER );
 		C_BaseEntity *pAttachment = m_hEntity->FirstMoveChild();
