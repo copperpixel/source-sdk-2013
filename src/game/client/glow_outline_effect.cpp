@@ -326,14 +326,14 @@ void CGlowObjectManager::GlowObjectDefinition_t::DrawModel()
 		{
 			render->InstallBrushSurfaceRenderer( &s_glowBrushRenderer );
 
-			// HACK: we need to draw an outline for a  dummy studio model to fix brush model outlines sometimes not drawing correctly
-			static bool s_bModelSet = false;
-			static C_BaseAnimating* s_pDummy = new C_BaseAnimating();
-			if( !s_bModelSet )
+			// HACK: Need to draw dummy studio model to set up render states for brush model glow outlines to render correctly
+			// Proper fix would require modifying engine code
+			static C_BaseAnimating* s_pDummy = NULL;
+			if( !s_pDummy )
 			{
-				s_pDummy->SetModel( "models/player.mdl" );
+				s_pDummy = new C_BaseAnimating();
+				s_pDummy->SetModel( "models/player.mdl" ); // should be available in all Source 2013 games
 				s_pDummy->SetModelScale( .0f );
-				s_bModelSet = true;
 			}
 			s_pDummy->DrawModel( STUDIO_RENDER );
 		}
