@@ -84,7 +84,7 @@ IMPLEMENT_SERVERCLASS_ST( CBaseAnimatingOverlay, DT_BaseAnimatingOverlay )
 END_SEND_TABLE()
 
 
-BEGIN_ENT_SCRIPTDESC( CBaseAnimatingOverlay, CBaseAnimating, "Animating models Ex" )
+BEGIN_ENT_SCRIPTDESC( CBaseAnimatingOverlay, CBaseAnimating, "Animating models with gestures and layers" )
 	DEFINE_SCRIPTFUNC_NAMED( ScriptAddGestureSequence, "AddGestureSequenceSimple", "Add a gesture sequence. Returns index to the layer" )
 	DEFINE_SCRIPTFUNC_NAMED( ScriptAddGestureSequenceDuration, "AddGestureSequenceDuration", "Add a gesture sequence for a set duration. Returns index to the layer" )
 	DEFINE_SCRIPTFUNC_NAMED( ScriptAddGesture, "AddGestureSimple", "Add a gesture. Returns index to the layer" )
