@@ -104,7 +104,7 @@ BEGIN_ENT_SCRIPTDESC( CBaseAnimatingOverlay, CBaseAnimating, "Animating models w
 	DEFINE_SCRIPTFUNC( GetLayerDuration, "Get the duration of an animation layer" )
 
 	DEFINE_SCRIPTFUNC_NAMED( ScriptSetLayerCycle, "SetLayerCycleSimple", "Set cycle for a layer" )
-	DEFINE_SCRIPTFUNC_NAMED( ScriptSetLayerCycleLastEventCheck, "SetLayerCycleLastEventCheck", "Set cycle with previous cycle and event check" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptSetLayerCycleLastEventCheck, "SetLayerCycleLastEventCheck", "Set cycle for a layer with last event check" )
 	DEFINE_SCRIPTFUNC( GetLayerCycle, "Get the current cycle of an animation layer" )
 
 	DEFINE_SCRIPTFUNC( SetLayerPlaybackRate, "Set playback rate of a layer" )
