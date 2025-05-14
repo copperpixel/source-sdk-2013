@@ -39,6 +39,8 @@ ConVar voice_serverdebug( "voice_serverdebug", "0" );
 // Muted players still can't talk to each other.
 ConVar sv_alltalk( "sv_alltalk", "0", FCVAR_NOTIFY | FCVAR_REPLICATED, "Players can hear all other players, no team restrictions" );
 
+ConVar sv_proximity_voice_enable( "sv_proximity_voice_enable", "0", FCVAR_NOTIFY | FCVAR_REPLICATED, "Enable proximity voice chat" );
+ConVar sv_proximity_voice_distance( "sv_proximity_voice_distance", "16", FCVAR_NOTIFY | FCVAR_REPLICATED, "Max distance at which voice will be projected" );
 
 CVoiceGameMgr g_VoiceGameMgr;
 
@@ -103,7 +105,6 @@ CVoiceGameMgr::CVoiceGameMgr()
 {
 	m_UpdateInterval = 0;
 	m_nMaxPlayers = 0;
-	m_iProximityDistance = -1;
 }
 
 
@@ -225,7 +226,7 @@ void CVoiceGameMgr::UpdateMasks()
 
 		CPlayerBitVec gameRulesMask;
 		CPlayerBitVec ProximityMask;
-		bool		bProximity = false;
+		bool bProximity = sv_proximity_voice_enable.GetBool();
 		if( g_PlayerModEnable[iClient] )
 		{
 			// Build a mask of who they can hear based on the game rules.
@@ -278,14 +279,9 @@ bool CVoiceGameMgr::IsPlayerIgnoringPlayer( int iTalker, int iListener )
 	return !!g_BanMasks[iListener-1][iTalker-1];
 }
 
-void CVoiceGameMgr::SetProximityDistance( int iDistance )
-{
-	m_iProximityDistance = iDistance;
-}
-
 bool CVoiceGameMgr::CheckProximity( int iDistance )
 {
-	if ( m_iProximityDistance >= iDistance )
+	if ( sv_proximity_voice_distance.GetInt() >= iDistance )
 		return true;
 
 	return false;
