@@ -93,6 +93,8 @@ protected:
 
 	bool LoadHudAnimations( void );
 
+	void GetSafeZoneMargins( int& iLeft, int& iTop, int& iRight, int& iBottom );
+
 #ifndef _XBOX
 	class CBackGroundPanel : public vgui::Frame
 	{

@@ -77,6 +77,9 @@ void hud_autoreloadscript_callback( IConVar *var, const char *pOldValue, float f
 	}
 }
 
+ConVar safezonex( "safezonex", "0", FCVAR_ARCHIVE, "The percentage of the screen width that is considered safe from overscan", true, 0.0f, true, 0.2f );
+ConVar safezoney( "safezoney", "0", FCVAR_ARCHIVE, "The percentage of the screen height that is considered safe from overscan", true, 0.0f, true, 0.1f );
+
 static ConVar cl_leveloverviewmarker( "cl_leveloverviewmarker", "0", FCVAR_CHEAT );
 
 CON_COMMAND( showpanel, "Shows a viewport panel <name>" )
@@ -154,6 +157,20 @@ bool CBaseViewport::LoadHudAnimations( void )
 
 	manifest->deleteThis();
 	return true;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose:
+//-----------------------------------------------------------------------------
+void CBaseViewport::GetSafeZoneMargins( int& iLeft, int& iTop, int& iRight, int& iBottom )
+{
+	int iWide, iTall;
+	vgui::ipanel()->GetSize( enginevgui->GetPanel( PANEL_CLIENTDLL ), iWide, iTall );
+
+	iLeft   = ( int )( safezonex.GetFloat() * iWide );
+	iTop    = ( int )( safezoney.GetFloat() * iTall );
+	iRight  = iWide - iLeft;
+	iBottom = iTall - iTop;
 }
 
 //================================================================
@@ -760,6 +777,15 @@ int CBaseViewport::GetDeathMessageStartHeight( void )
 
 void CBaseViewport::Paint()
 {
+	int iLeft, iTop, iRight, iBottom;
+	GetSafeZoneMargins( iLeft, iTop, iRight, iBottom );
+
+	vgui::surface()->DrawSetColor( 255, 0, 0, 64 );
+	vgui::surface()->DrawFilledRect( 0, 0, iLeft, GetTall() );
+	vgui::surface()->DrawFilledRect( iRight, 0, GetWide(), GetTall() );
+	vgui::surface()->DrawFilledRect( 0, 0, GetWide(), iTop );
+	vgui::surface()->DrawFilledRect( 0, iBottom, GetWide(), GetTall() );
+
 	if ( cl_leveloverviewmarker.GetInt() > 0 )
 	{
 		int size = cl_leveloverviewmarker.GetInt();
