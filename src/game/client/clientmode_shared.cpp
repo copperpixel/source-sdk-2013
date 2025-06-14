@@ -78,6 +78,13 @@ class CHudVote;
 
 static vgui::HContext s_hVGuiContext = DEFAULT_VGUI_CONTEXT;
 
+void ClientMode_CVarLayout( IConVar* pCVar, const char* pszOldValue, float flOldValue )
+{
+	if( GetClientModeNormal() )
+		GetClientModeNormal()->Layout();
+}
+
+ConVar hud_aspect( "hud_aspect", "0", FCVAR_ARCHIVE, "Force the aspect ratio of the hud. 0 to disable.", ClientMode_CVarLayout );
 ConVar cl_drawhud( "cl_drawhud", "1", FCVAR_CHEAT, "Enable the rendering of the hud" );
 ConVar hud_takesshots( "hud_takesshots", "0", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Auto-save a scoreboard screenshot at the end of a map." );
 ConVar hud_freezecamhide( "hud_freezecamhide", "0", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Hide the HUD during freeze-cam" );
@@ -967,18 +974,40 @@ void ClientModeShared::Disable()
 void ClientModeShared::Layout()
 {
 	vgui::VPANEL pRoot = VGui_GetClientDLLRootPanel();
-	int wide, tall;
+	int wide, tall, x = 0, y = 0;
 
 	// Make the viewport fill the root panel.
 	if( pRoot != 0 )
 	{
 		vgui::ipanel()->GetSize(pRoot, wide, tall);
 
+		// Override the HUD aspect ratio if desired
+		if( hud_aspect.GetBool() )
+		{
+			float flRealAspect = ( float )wide / ( float )tall;
+			float flCustomAspect = hud_aspect.GetFloat();
+
+			if( flRealAspect > flCustomAspect )
+			{
+				// Letterbox
+				int iOldWide = wide;
+				wide = ( int )( tall * flCustomAspect );
+				x = ( iOldWide - wide ) / 2;
+			}
+			else if( flRealAspect < flCustomAspect )
+			{
+				// Pillarbox
+				int iOldTall = tall;
+				tall = ( int )( wide / flCustomAspect );
+				y = ( iOldTall - tall ) / 2;
+			}
+		}
+
 		bool changed = wide != m_nRootSize[ 0 ] || tall != m_nRootSize[ 1 ];
 		m_nRootSize[ 0 ] = wide;
 		m_nRootSize[ 1 ] = tall;
 
-		m_pViewport->SetBounds(0, 0, wide, tall);
+		m_pViewport->SetBounds(x, y, wide, tall);
 		if ( changed )
 		{
 			ReloadScheme(false);
