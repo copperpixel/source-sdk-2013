@@ -348,7 +348,7 @@ void CMDLPanel::DrawCollisionModel()
 	CStudioHdr &studioHdr = *m_RootMDL.m_pStudioHdr;
 
 	matrix3x4_t pBoneToWorld[MAXSTUDIOBONES];
-	SetupBones( m_RootMDL, MAXSTUDIOBONES, pBoneToWorld );
+	SetupBones( m_RootMDL, pBoneToWorld );
 
 	// PERFORMANCE: Just parse the script each frame.  It's fast enough for tools.  If you need
 	// this to go faster then cache off the bone index mapping in an array like HLMV does
@@ -470,7 +470,7 @@ void CMDLPanel::OnPaint3D()
 	SetupFlexWeights();
 
 	matrix3x4_t *pBoneToWorld = g_pStudioRender->LockBoneMatrices( studioHdr.numbones() );
-	SetupBones( m_RootMDL, studioHdr.numbones(), pBoneToWorld, m_PoseParameters, m_SequenceLayers, m_nNumSequenceLayers );
+	SetupBones( m_RootMDL, pBoneToWorld, m_PoseParameters, m_SequenceLayers, m_nNumSequenceLayers );
 	g_pStudioRender->UnlockBoneMatrices();
 
 	IMaterial* pOverrideMaterial = GetOverrideMaterial( m_RootMDL.m_MDL.GetMDL() );
@@ -991,7 +991,7 @@ void CMDLPanel::ValidateMDLs()
 	}
 }
 
-void CMDLPanel::SetupBones( MDLData_t& mdlData, int nMaxBoneCount, matrix3x4_t* pBoneToWorld,
+void CMDLPanel::SetupBones( MDLData_t& mdlData, matrix3x4_t* pBoneToWorld,
 							const float* pflPoseParameters /*= NULL*/, MDLSquenceLayer_t* pSequenceLayers /*= NULL*/, int nNumSequenceLayers /*= 0*/ )
 {
 	CMDL& mdl = mdlData.m_MDL;
@@ -1007,21 +1007,19 @@ void CMDLPanel::SetupBones( MDLData_t& mdlData, int nMaxBoneCount, matrix3x4_t* 
 
 	QAngle renderAngles;
 	Vector renderOrigin;
-	MatrixAngles( mdlData.m_MDLToWorld, renderAngles );
-	MatrixPosition( mdlData.m_MDLToWorld, renderOrigin );
+	MatrixAngles( mdlData.m_MDLToWorld, renderAngles, renderOrigin );
 
-	IBoneSetup boneSetup( pStudioHdr, BONE_USED_BY_ANYTHING, pflPoseParameters );
+	IBoneSetup boneSetup( pStudioHdr, BONE_USED_BY_ANYTHING_AT_LOD( mdl.m_nLOD ), pflPoseParameters);
 
 	Vector pos[ MAXSTUDIOBONES ];
 	Quaternion q[ MAXSTUDIOBONES ];
 	boneSetup.InitPose( pos, q );
 
 	int nFrameCount = Studio_MaxFrame( pStudioHdr, mdl.m_nSequence, pflPoseParameters );
-	float flPlaybackRate = Studio_FPS( pStudioHdr, mdl.m_nSequence, pflPoseParameters );
-	float flCycle = ( mdl.m_flTime * flPlaybackRate ) / nFrameCount;
+	float flCycle = ( mdl.m_flTime * mdl.m_flPlaybackRate ) / nFrameCount;
 	flCycle -= ( int )flCycle;
 
-	pIKContext->Init( pStudioHdr, renderAngles, renderOrigin, mdl.m_flTime, 0, BONE_USED_BY_ANYTHING );
+	pIKContext->Init( pStudioHdr, renderAngles, renderOrigin, mdl.m_flTime, 0, BONE_USED_BY_ANYTHING_AT_LOD( mdl.m_nLOD ) );
 
 	boneSetup.AccumulatePose( pos, q, mdl.m_nSequence, flCycle, 1.0f, mdl.m_flTime, pIKContext );
 
@@ -1032,15 +1030,15 @@ void CMDLPanel::SetupBones( MDLData_t& mdlData, int nMaxBoneCount, matrix3x4_t* 
 			nFrameCount = Studio_MaxFrame( pStudioHdr, pSequenceLayers[ i ].m_nSequenceIndex, pflPoseParameters );
 			if( pSequenceLayers[ i ].m_bNoLoop )
 			{
-				if( pSequenceLayers[ i ].m_flCycleBeganAt == 0 )
+				if( pSequenceLayers[ i ].m_flCycleBeganAt == .0f )
 					pSequenceLayers[ i ].m_flCycleBeganAt = mdl.m_flTime;
 
 				float flElapsedTime = mdl.m_flTime - pSequenceLayers[ i ].m_flCycleBeganAt;
-				flCycle = ( flElapsedTime * flPlaybackRate ) / nFrameCount;
+				flCycle = ( flElapsedTime * mdl.m_flPlaybackRate ) / nFrameCount;
 			}
 			else
 			{
-				flCycle = ( mdl.m_flTime * flPlaybackRate ) / nFrameCount;
+				flCycle = ( mdl.m_flTime * mdl.m_flPlaybackRate ) / nFrameCount;
 			}
 			flCycle -= ( int )flCycle;
 
@@ -1056,5 +1054,5 @@ void CMDLPanel::SetupBones( MDLData_t& mdlData, int nMaxBoneCount, matrix3x4_t* 
 	pIKContext->SolveDependencies( pos, q, pBoneToWorld, boneComputed );
 
 	Studio_RunBoneFlexDrivers( mdl.m_pFlexControls, pStudioHdr, pos, pBoneToWorld, mdlData.m_MDLToWorld );
-	Studio_BuildMatrices( pStudioHdr, renderAngles, renderOrigin, pos, q, -1, 1.0f, pBoneToWorld, BONE_USED_BY_ANYTHING );
+	Studio_BuildMatrices( pStudioHdr, renderAngles, renderOrigin, pos, q, -1, 1.0f, pBoneToWorld, BONE_USED_BY_ANYTHING_AT_LOD( mdl.m_nLOD ) );
 }

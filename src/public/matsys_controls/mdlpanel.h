@@ -146,7 +146,7 @@ private:
 	void DrawCollisionModel();
 	void UpdateStudioRenderConfig( void );
 
-	void SetupBones( MDLData_t& mdlData, int nMaxBoneCount, matrix3x4_t* pBoneToWorld,
+	void SetupBones( MDLData_t& mdlData, matrix3x4_t* pBoneToWorld,
 					 const float* pflPoseParameters = NULL, MDLSquenceLayer_t* pSequenceLayers = NULL, int nNumSequenceLayers = 0 );
 
 	CTextureReference m_DefaultEnvCubemap;
