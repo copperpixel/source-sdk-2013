@@ -75,7 +75,6 @@ CMDLPanel::CMDLPanel( vgui::Panel *pParent, const char *pName ) : BaseClass( pPa
 	SetIdentityMatrix( m_RootMDL.m_MDLToWorld );
 	m_RootMDL.m_pStudioHdr = NULL;
 	m_RootMDL.m_unMdlCacheSerial = 0;
-	m_RootMDL.m_pIKContext = NULL;
 	m_bDrawCollisionModel = false;
 	m_bWireFrame = false;
 	m_bGroundGrid = false;
@@ -95,11 +94,6 @@ CMDLPanel::~CMDLPanel()
 	{
 		delete m_RootMDL.m_pStudioHdr;
 		m_RootMDL.m_pStudioHdr = NULL;
-	}
-	if ( m_RootMDL.m_pIKContext )
-	{
-		delete m_RootMDL.m_pIKContext;
-		m_RootMDL.m_pIKContext = NULL;
 	}
 }
 
@@ -165,11 +159,6 @@ void CMDLPanel::SetMDL( MDLHandle_t handle, void *pProxyData )
 	}
 	m_RootMDL.m_pStudioHdr = new CStudioHdr( m_RootMDL.m_MDL.GetStudioHdr(), g_pMDLCache );
 	m_RootMDL.m_MDL.m_pProxyData = pProxyData;
-	if ( m_RootMDL.m_pIKContext )
-	{
-		delete m_RootMDL.m_pIKContext;
-	}
-	m_RootMDL.m_pIKContext = new CIKContext;
 
 	Vector vecMins, vecMaxs;
 	GetMDLBoundingBox( &vecMins, &vecMaxs, handle, m_RootMDL.m_MDL.m_nSequence );
@@ -996,7 +985,6 @@ void CMDLPanel::SetupBones( MDLData_t& mdlData, matrix3x4_t* pBoneToWorld,
 {
 	CMDL& mdl = mdlData.m_MDL;
 	CStudioHdr* pStudioHdr = mdlData.m_pStudioHdr;
-	CIKContext* pIKContext = mdlData.m_pIKContext;
 
 	if( !pflPoseParameters )
 	{
@@ -1019,9 +1007,10 @@ void CMDLPanel::SetupBones( MDLData_t& mdlData, matrix3x4_t* pBoneToWorld,
 	float flCycle = ( mdl.m_flTime * mdl.m_flPlaybackRate ) / nFrameCount;
 	flCycle -= ( int )flCycle;
 
-	pIKContext->Init( pStudioHdr, renderAngles, renderOrigin, mdl.m_flTime, 0, BONE_USED_BY_ANYTHING_AT_LOD( mdl.m_nLOD ) );
+	CIKContext auto_ik;
+	auto_ik.Init( pStudioHdr, renderAngles, renderOrigin, mdl.m_flTime, 0, BONE_USED_BY_ANYTHING_AT_LOD( mdl.m_nLOD ) );
 
-	boneSetup.AccumulatePose( pos, q, mdl.m_nSequence, flCycle, 1.0f, mdl.m_flTime, pIKContext );
+	boneSetup.AccumulatePose( pos, q, mdl.m_nSequence, flCycle, 1.0f, mdl.m_flTime, &auto_ik );
 
 	if( pSequenceLayers )
 	{
@@ -1043,15 +1032,15 @@ void CMDLPanel::SetupBones( MDLData_t& mdlData, matrix3x4_t* pBoneToWorld,
 			flCycle -= ( int )flCycle;
 
 			boneSetup.AccumulatePose( pos, q, pSequenceLayers[ i ].m_nSequenceIndex, flCycle,
-									  pSequenceLayers[ i ].m_flWeight, mdl.m_flTime, pIKContext );
+									  pSequenceLayers[ i ].m_flWeight, mdl.m_flTime, &auto_ik );
 		}
 	}
 
-	boneSetup.CalcAutoplaySequences( pos, q, mdl.m_flTime, pIKContext );
+	boneSetup.CalcAutoplaySequences( pos, q, mdl.m_flTime, &auto_ik );
 	boneSetup.CalcBoneAdj( pos, q, pflPoseParameters );
 
 	CBoneBitList boneComputed;
-	pIKContext->SolveDependencies( pos, q, pBoneToWorld, boneComputed );
+	auto_ik.SolveDependencies( pos, q, pBoneToWorld, boneComputed );
 
 	Studio_RunBoneFlexDrivers( mdl.m_pFlexControls, pStudioHdr, pos, pBoneToWorld, mdlData.m_MDLToWorld );
 	Studio_BuildMatrices( pStudioHdr, renderAngles, renderOrigin, pos, q, -1, 1.0f, pBoneToWorld, BONE_USED_BY_ANYTHING_AT_LOD( mdl.m_nLOD ) );

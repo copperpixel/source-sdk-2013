@@ -26,7 +26,6 @@ namespace vgui
 {
 	class IScheme;
 }
-class CIKContext;
 
 // 
 struct MDLAnimEventState_t
@@ -119,7 +118,6 @@ protected:
 		float		m_flCycleStartTime;
 		CStudioHdr	*m_pStudioHdr;
 		uint32		m_unMdlCacheSerial;
-		CIKContext  *m_pIKContext;
 	};
 
 	MDLData_t				m_RootMDL;
