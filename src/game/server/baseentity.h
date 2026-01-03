@@ -1968,7 +1968,7 @@ private:
 	friend void TransferChildren( CBaseEntity *pOldParent, CBaseEntity *pNewParent );
 
 	bool m_bForcePurgeFixedupStrings; // For template entites so we don't leak strings.
-	
+
 public:
 	// Accessors for above
 	static int						GetPredictionRandomSeed( bool bUseUnSyncedServerPlatTime = false );
@@ -2023,10 +2023,15 @@ public:
 
 	virtual bool BCanCallVote() { return true; }
 
+	// You can override this if you want your entity to always (or never) be lag compensated
+	virtual bool BShouldLagCompensate( void ) const { return m_bLagCompensate; }
+
 private:
 	CThreadFastMutex m_CalcAbsolutePositionMutex;
 
 	bool	m_bTruceValidForEnt;
+
+	bool	m_bLagCompensate;
 };
 
 // Send tables exposed in this module.

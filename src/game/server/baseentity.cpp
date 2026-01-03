@@ -63,6 +63,7 @@
 #include "tier1/utlstring.h"
 #include "utlhashtable.h"
 #include "vscript_server.h"
+#include "ilagcompensationmanager.h"
 
 #if defined( TF_DLL )
 #include "tf_gamerules.h"
@@ -2227,6 +2228,8 @@ BEGIN_DATADESC_NO_BASE( CBaseEntity )
 	DEFINE_ARRAY( m_nModelIndexOverrides, FIELD_INTEGER, MAX_VISION_MODES ),
 #endif
 
+	DEFINE_KEYFIELD( m_bLagCompensate, FIELD_BOOLEAN, "LagCompensate" ),
+
 END_DATADESC()
 
 DEFINE_SCRIPT_INSTANCE_HELPER( CBaseEntity, &g_BaseEntityScriptInstanceHelper )
@@ -2444,6 +2447,12 @@ void CBaseEntity::UpdateOnRemove( void )
 
 	// Virtual call to shut down any looping sounds.
 	StopLoopingSounds();
+
+	// Remove from lag compensation 'extra' list
+	if ( BShouldLagCompensate() )
+	{
+		lagcompensation->RemoveAdditionalEntity( this );
+	}
 
 	// Notifies entity listeners, etc
 	gEntList.NotifyRemoveEntity( GetRefEHandle() );
@@ -3950,6 +3959,11 @@ void CBaseEntity::SetMoveType( MoveType_t val, MoveCollide_t moveCollide )
 
 void CBaseEntity::Spawn( void ) 
 {
+	// Add to lag compensation list
+	if ( BShouldLagCompensate() )
+	{
+		lagcompensation->AddAdditionalEntity( this );
+	}
 }
 
 

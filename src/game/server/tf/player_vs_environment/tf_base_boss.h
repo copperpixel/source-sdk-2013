@@ -55,6 +55,7 @@ public:
 	virtual int OnTakeDamage_Alive( const CTakeDamageInfo &info );
 	virtual void Event_Killed( const CTakeDamageInfo &info );
 	virtual void UpdateOnRemove();
+	virtual bool BShouldLagCompensate( void ) const { return true; }
 
 	virtual bool IsRemovedOnReset( void ) const { return false; }	// remove this bot when the NextBot manager calls Reset
 

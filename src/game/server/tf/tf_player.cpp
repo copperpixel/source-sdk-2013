@@ -20075,7 +20075,7 @@ extern ConVar friendlyfire;
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-bool CTFPlayer::WantsLagCompensationOnEntity( const CBasePlayer *pPlayer, const CUserCmd *pCmd, const CBitVec<MAX_EDICTS> *pEntityTransmitBits ) const
+bool CTFPlayer::WantsLagCompensationOnEntity( const CBaseEntity *pEntity, const CUserCmd *pCmd, const CBitVec<MAX_EDICTS> *pEntityTransmitBits ) const
 {
 	bool bIsMedic = false;
 	bool bIsMeleeingTeamMate = false;
@@ -20087,13 +20087,13 @@ bool CTFPlayer::WantsLagCompensationOnEntity( const CBasePlayer *pPlayer, const 
 		{
 			bIsMedic = true;
 
-			if ( pPlayer->GetTeamNumber() == GetTeamNumber()  )
+			if ( pEntity->GetTeamNumber() == GetTeamNumber()  )
 			{
 				CWeaponMedigun *pWeapon = dynamic_cast <CWeaponMedigun*>( GetActiveWeapon() );
 
 				if ( pWeapon && pWeapon->GetHealTarget() )
 				{
-					if ( pWeapon->GetHealTarget() == pPlayer )
+					if ( pWeapon->GetHealTarget() == pEntity )
 						return true;
 					else
 						return false;
@@ -20101,7 +20101,7 @@ bool CTFPlayer::WantsLagCompensationOnEntity( const CBasePlayer *pPlayer, const 
 			}
 		}
 
-		if ( pPlayer->GetTeamNumber() == GetTeamNumber() )
+		if ( pEntity->GetTeamNumber() == GetTeamNumber() )
 		{
 			// Josh: Lag compensate melee attacks on teammates. Helps with weapons like the Solider's whip, etc.
 			CTFWeaponBaseMelee *pWeapon = dynamic_cast< CTFWeaponBaseMelee * >( GetActiveWeapon() );
@@ -20119,15 +20119,17 @@ bool CTFPlayer::WantsLagCompensationOnEntity( const CBasePlayer *pPlayer, const 
 	}
 
 	const Vector& vMyOrigin = GetAbsOrigin();
-	const Vector& vHisOrigin = pPlayer->GetAbsOrigin();
+	const Vector& vHisOrigin = pEntity->GetAbsOrigin();
 	
 	// If this entity hasn't been transmitted to us and acked, then don't bother lag compensating it.
-	if ( pEntityTransmitBits && !pEntityTransmitBits->Get( pPlayer->entindex() ) )
+	if ( pEntityTransmitBits && !pEntityTransmitBits->Get( pEntity->entindex() ) )
 		return false;
 
 	// get max distance player could have moved within max lag compensation time, 
 	// multiply by 1.5 to to avoid "dead zones"  (sqrt(2) would be the exact value)
-	float maxDistance = 1.5 * pPlayer->MaxSpeed() * sv_maxunlag.GetFloat();
+	const CBasePlayer *pPlayer = ToBasePlayer( pEntity );
+	float flMaxSpeed = pPlayer ? pPlayer->MaxSpeed() : 300.f;
+	float maxDistance = 1.5f * flMaxSpeed * sv_maxunlag.GetFloat();
 
 	// If the player is within this distance, lag compensate them in case they're running past us.
 	if ( vHisOrigin.DistTo( vMyOrigin ) < maxDistance )

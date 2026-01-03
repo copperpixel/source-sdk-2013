@@ -31,6 +31,7 @@ public:
 	virtual int OnTakeDamage_Alive( const CTakeDamageInfo &info );
 	virtual void Event_Killed( const CTakeDamageInfo &info ) OVERRIDE;
 	virtual void UpdateOnRemove();
+	virtual bool BShouldLagCompensate( void ) const { return true; }
 
 	virtual void Update( void );
 

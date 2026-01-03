@@ -948,7 +948,7 @@ public:
 	void				StopRandomExpressions( void ) { m_flNextRandomExpressionTime = -1; }
 	void				StartRandomExpressions( void ) { m_flNextRandomExpressionTime = gpGlobals->curtime; }
 
-	virtual bool			WantsLagCompensationOnEntity( const CBasePlayer	*pPlayer, const CUserCmd *pCmd, const CBitVec<MAX_EDICTS> *pEntityTransmitBits ) const;
+	virtual bool			WantsLagCompensationOnEntity( const CBaseEntity	*pEntity, const CUserCmd *pCmd, const CBitVec<MAX_EDICTS> *pEntityTransmitBits ) const;
 
 	CTFWeaponBase		*Weapon_OwnsThisID( int iWeaponID ) const;
 	CTFWeaponBase		*Weapon_GetWeaponByType( int iType );

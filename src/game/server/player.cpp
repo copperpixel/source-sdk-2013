@@ -74,6 +74,10 @@
 #include "econ_wearable.h"
 #endif
 
+#ifdef NEXT_BOT
+#include "NextBot.h"
+#endif //NEXT_BOT
+
 // NVNT haptic utils
 #include "haptics/haptic_utils.h"
 
@@ -289,6 +293,7 @@ BEGIN_DATADESC( CBasePlayer )
 
 	DEFINE_FIELD( m_nUpdateRate, FIELD_INTEGER ),
 	DEFINE_FIELD( m_fLerpTime, FIELD_FLOAT ),
+	DEFINE_FIELD( m_fNpcLerpTime, FIELD_FLOAT ),
 	DEFINE_FIELD( m_bLagCompensation, FIELD_BOOLEAN ),
 	DEFINE_FIELD( m_bPredictWeapons, FIELD_BOOLEAN ),
 
@@ -604,6 +609,7 @@ CBasePlayer::CBasePlayer( )
 	m_bPendingClientSettings = false;
 	m_nUpdateRate = 20;  // cl_updaterate defualt
 	m_fLerpTime = 0.1f; // cl_interp default
+	m_fNpcLerpTime = 0.25f; // cl_interp_npcs default
 	m_bPredictWeapons = true;
 	m_bRequestPredict = true;
 	m_bLagCompensation = false;
@@ -747,22 +753,29 @@ int CBasePlayer::ShouldTransmit( const CCheckTransmitInfo *pInfo )
 }
 
 
-bool CBasePlayer::WantsLagCompensationOnEntity( const CBasePlayer *pPlayer, const CUserCmd *pCmd, const CBitVec<MAX_EDICTS> *pEntityTransmitBits ) const
+bool CBasePlayer::WantsLagCompensationOnEntity( const CBaseEntity *pEntity, const CUserCmd *pCmd, const CBitVec<MAX_EDICTS> *pEntityTransmitBits ) const
 {
 	// Team members shouldn't be adjusted unless friendly fire is on.
-	if ( !friendlyfire.GetInt() && pPlayer->GetTeamNumber() == GetTeamNumber() )
+	if ( !friendlyfire.GetInt() && pEntity->GetTeamNumber() == GetTeamNumber() )
 		return false;
 
 	// If this entity hasn't been transmitted to us and acked, then don't bother lag compensating it.
-	if ( pEntityTransmitBits && !pEntityTransmitBits->Get( pPlayer->entindex() ) )
+	if ( pEntityTransmitBits && !pEntityTransmitBits->Get( pEntity->entindex() ) )
 		return false;
 
 	const Vector &vMyOrigin = GetAbsOrigin();
-	const Vector &vHisOrigin = pPlayer->GetAbsOrigin();
+	const Vector &vHisOrigin = pEntity->GetAbsOrigin();
 
 	// get max distance player could have moved within max lag compensation time, 
 	// multiply by 1.5 to to avoid "dead zones"  (sqrt(2) would be the exact value)
-	float maxDistance = 1.5 * pPlayer->MaxSpeed() * sv_maxunlag.GetFloat();
+	float flMaxSpeed = 300.f;
+	if ( pEntity->IsPlayer() )
+		flMaxSpeed = ToBasePlayer( pEntity )->MaxSpeed();
+#ifdef NEXT_BOT
+	else if ( pEntity->IsNextBot() )
+		flMaxSpeed = const_cast< CBaseEntity * >( pEntity )->MyNextBotPointer()->GetLocomotionInterface()->GetSpeedLimit();
+#endif //NEXT_BOT
+	float maxDistance = 1.5f * flMaxSpeed * sv_maxunlag.GetFloat();
 
 	// If the player is within this distance, lag compensate them in case they're running past us.
 	if ( vHisOrigin.DistTo( vMyOrigin ) < maxDistance )
@@ -3493,7 +3506,8 @@ void CBasePlayer::ClientSettingsChanged()
 		float flLerpRatio = Q_atof( QUICKGETCVARVALUE("cl_interp_ratio") );
 		if ( flLerpRatio == 0 )
 			flLerpRatio = 1.0f;
-		float flLerpAmount = Q_atof( QUICKGETCVARVALUE("cl_interp") );
+		float flBaseLerpAmount = Q_atof( QUICKGETCVARVALUE("cl_interp") );
+		float flNpcLerpAmount = Max( Q_atof( QUICKGETCVARVALUE("cl_interp_npcs") ), flBaseLerpAmount );
 
 		static const ConVar *pMin = g_pCVar->FindVar( "sv_client_min_interp_ratio" );
 		static const ConVar *pMax = g_pCVar->FindVar( "sv_client_max_interp_ratio" );
@@ -3507,11 +3521,13 @@ void CBasePlayer::ClientSettingsChanged()
 				flLerpRatio = 1.0f;
 		}
 		// #define FIXME_INTERP_RATIO
-		this->m_fLerpTime = MAX( flLerpAmount, flLerpRatio / this->m_nUpdateRate );
+		this->m_fLerpTime = Max( flBaseLerpAmount, flLerpRatio / this->m_nUpdateRate );
+		this->m_fNpcLerpTime = Max( flNpcLerpAmount, flLerpRatio / this->m_nUpdateRate );
 	}
 	else
 	{
 		this->m_fLerpTime = 0.0f;
+		this->m_fNpcLerpTime = 0.0f;
 	}
 
 #if !defined( NO_ENTITY_PREDICTION )

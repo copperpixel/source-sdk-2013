@@ -24,6 +24,10 @@ public:
 	virtual void	StartLagCompensation( CBasePlayer *player, CUserCmd *cmd ) = 0;
 	virtual void	FinishLagCompensation( CBasePlayer *player ) = 0;
 	virtual bool	IsCurrentlyDoingLagCompensation() const = 0;
+
+	// Mappers can flag certain additional entities to lag compensate, this handles them
+	virtual void	AddAdditionalEntity( EHANDLE hEntity ) = 0;
+	virtual void	RemoveAdditionalEntity( EHANDLE hEntity ) = 0;
 };
 
 extern ILagCompensationManager *lagcompensation;
