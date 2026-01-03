@@ -768,13 +768,8 @@ bool CBasePlayer::WantsLagCompensationOnEntity( const CBaseEntity *pEntity, cons
 
 	// get max distance player could have moved within max lag compensation time, 
 	// multiply by 1.5 to to avoid "dead zones"  (sqrt(2) would be the exact value)
-	float flMaxSpeed = 300.f;
-	if ( pEntity->IsPlayer() )
-		flMaxSpeed = ToBasePlayer( pEntity )->MaxSpeed();
-#ifdef NEXT_BOT
-	else if ( pEntity->IsNextBot() )
-		flMaxSpeed = const_cast< CBaseEntity * >( pEntity )->MyNextBotPointer()->GetLocomotionInterface()->GetSpeedLimit();
-#endif //NEXT_BOT
+	const CBasePlayer *pPlayer = ToBasePlayer( pEntity );
+	float flMaxSpeed = pPlayer ? pPlayer->MaxSpeed() : 300.f;
 	float maxDistance = 1.5f * flMaxSpeed * sv_maxunlag.GetFloat();
 
 	// If the player is within this distance, lag compensate them in case they're running past us.
