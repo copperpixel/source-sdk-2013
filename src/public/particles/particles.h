@@ -227,6 +227,24 @@ FORCEINLINE bool ParticlesCheckFloat( const Quaternion& v );
 #endif
 
 //-----------------------------------------------------------------------------
+// Query objects for storing data in the particle for the system query
+//-----------------------------------------------------------------------------
+enum EParticleQueryObjectKind
+{
+	k_EParticleQueryObjectKindEntity = 0,
+	k_EParticleQueryObjectKindPanel
+};
+
+abstract_class IParticleQueryObject
+{
+public:
+	virtual	~IParticleQueryObject( void ) {}
+
+	virtual EParticleQueryObjectKind GetKind( void ) = 0;
+	virtual void					*GetInner( void ) = 0;
+};
+
+//-----------------------------------------------------------------------------
 // Interface to allow the particle system to call back into the client
 //-----------------------------------------------------------------------------
 
@@ -245,7 +263,7 @@ public:
 	// given a possible spawn point, tries to movie it to be on or in the source object. returns
 	// true if it succeeded
 	virtual bool MovePointInsideControllingObject( CParticleCollection *pParticles,
-												   void *pObject,
+												   IParticleQueryObject *pObject,
 												   Vector *pPnt )
 	{
 		return true;
@@ -1007,7 +1025,7 @@ struct CParticleControlPoint
 	float m_flDuration = 0.;
 
 	// reference to entity or whatever this control point comes from
-	void *m_pObject = nullptr;
+	IParticleQueryObject *m_pObject = nullptr;
 
 	// parent for hierarchies
 	int m_nParent = 0;
@@ -1063,7 +1081,7 @@ public:
 	void SetControlPointIndex( int nWhichPoint );
 	int	GetControlPointIndex( void ) const { return m_nTargetCP; }
 	void SetControlPoint( int nWhichPoint, const Vector &v );
-	void SetControlPointObject( int nWhichPoint, void *pObject );
+	void SetControlPointObject( int nWhichPoint, IParticleQueryObject *pObject );
 
 	void SetControlPointOrientation( int nWhichPoint, const Vector &forward,
 									 const Vector &right, const Vector &up );
@@ -1603,7 +1621,7 @@ inline void CParticleCollection::SetControlPoint( int nWhichPoint, const Vector 
 	}
 }
 
-inline void CParticleCollection::SetControlPointObject( int nWhichPoint, void *pObject )
+inline void CParticleCollection::SetControlPointObject( int nWhichPoint, IParticleQueryObject *pObject )
 {
 	Assert( ( nWhichPoint >= 0) && ( nWhichPoint < MAX_PARTICLE_CONTROL_POINTS ) );
 	m_ControlPoints[ nWhichPoint ].m_pObject = pObject;

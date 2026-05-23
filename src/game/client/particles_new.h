@@ -96,7 +96,7 @@ public:
 
 	FORCEINLINE EHANDLE const &GetControlPointEntity( int nWhichPoint )
 	{
-		return m_hControlPointOwners[ nWhichPoint ];
+		return m_rgControlPoints[ nWhichPoint ].m_hOwner;
 	}
 
 
@@ -150,7 +150,17 @@ protected:
 	int			m_nToolParticleEffectId;
 	Vector		m_vSortOrigin;
 	EHANDLE		m_hOwner;
-	EHANDLE     m_hControlPointOwners[MAX_PARTICLE_CONTROL_POINTS];
+
+	class CNewParticleQueryObject : public IParticleQueryObject
+	{
+	public:
+		EHANDLE	m_hOwner;
+
+	protected:
+		virtual EParticleQueryObjectKind GetKind( void ) { return k_EParticleQueryObjectKindEntity; }
+		virtual void					*GetInner( void ) { return m_hOwner.Get(); }
+	};
+	CNewParticleQueryObject m_rgControlPoints[ MAX_PARTICLE_CONTROL_POINTS ];
 
 	// holds the min/max bounds used to manage this thing in the client leaf system
 	Vector		m_LastMin;

@@ -41,7 +41,7 @@ public:
 							int collisionGroup, CBaseTrace *ptr );
 
 	virtual bool MovePointInsideControllingObject( CParticleCollection *pParticles,
-												   void *pObject,
+												   IParticleQueryObject *pObject,
 												   Vector *pPnt );
 	virtual void GetRandomPointsOnControllingObjectHitBox( 
 		CParticleCollection *pParticles,
@@ -161,7 +161,7 @@ void CParticleSystemQuery::TraceLine( const Vector& vecAbsStart,
 }
 
 bool CParticleSystemQuery::MovePointInsideControllingObject( 
-	CParticleCollection *pParticles, void *pObject, Vector *pPnt )
+	CParticleCollection *pParticles, IParticleQueryObject *pObject, Vector *pPnt )
 {
 #ifdef GAME_DLL
 	return true;
@@ -169,10 +169,17 @@ bool CParticleSystemQuery::MovePointInsideControllingObject(
 	if (! pObject )
 		return true;										// accept the input point unmodified
 
+	if ( pObject->GetKind() != k_EParticleQueryObjectKindEntity )
+		return true;
+
+	CBaseEntity *pEntity = ( CBaseEntity * )pObject->GetInner();
+	if ( !pEntity )
+		return true;
+
 	Ray_t ray;
 	trace_t tr;
 	ray.Init( *pPnt, *pPnt );
-	enginetrace->ClipRayToEntity( ray, MASK_ALL, (CBaseEntity *) pObject, &tr );
+	enginetrace->ClipRayToEntity( ray, MASK_ALL, pEntity, &tr );
 	
 	return ( tr.startsolid );
 #endif
@@ -203,9 +210,18 @@ void CParticleSystemQuery::GetRandomPointsOnControllingObjectHitBox(
 
 #ifndef GAME_DLL
 
-	EHANDLE *phMoveParent = reinterpret_cast< EHANDLE * >( pParticles->m_ControlPoints[ nControlPointNumber ].m_pObject );
-	CBaseEntity *pMoveParent = phMoveParent ? *( phMoveParent ) : NULL;
-	BMPParticleQueryObject_t *pBMPQueryObj = !pMoveParent ? reinterpret_cast< BMPParticleQueryObject_t * >( pParticles->m_ControlPoints[ nControlPointNumber ].m_pObject ) : NULL;
+	CBaseEntity				*pMoveParent = NULL;
+	CBMPParticleQueryObject *pBMPQueryObj = NULL;
+
+	IParticleQueryObject *pQueryObj = reinterpret_cast< IParticleQueryObject * >( pParticles->m_ControlPoints[ nControlPointNumber ].m_pObject );
+	if ( pQueryObj )
+	{
+		switch ( pQueryObj->GetKind() )
+		{
+		case k_EParticleQueryObjectKindEntity: pMoveParent = ( CBaseEntity * )pQueryObj->GetInner(); break;
+		case k_EParticleQueryObjectKindPanel: pBMPQueryObj = ( CBMPParticleQueryObject * )pQueryObj->GetInner(); break;
+		}
+	}
 
 	float flRandMax = flBBoxScale;
 	float flRandMin = 1.f - flBBoxScale;
@@ -404,9 +420,18 @@ int CParticleSystemQuery::GetControllingObjectHitBoxInfo(
 #ifndef GAME_DLL
 	s_BoneMutex.Lock();
 
-	EHANDLE *phMoveParent = reinterpret_cast< EHANDLE * >( pParticles->m_ControlPoints[ nControlPointNumber ].m_pObject );
-	CBaseEntity *pMoveParent = phMoveParent ? *( phMoveParent ) : NULL;
-	BMPParticleQueryObject_t *pBMPQueryObj = !pMoveParent ? reinterpret_cast< BMPParticleQueryObject_t * >( pParticles->m_ControlPoints[ nControlPointNumber ].m_pObject ) : NULL;
+	CBaseEntity				*pMoveParent = NULL;
+	CBMPParticleQueryObject	*pBMPQueryObj = NULL;
+
+	IParticleQueryObject *pQueryObj = reinterpret_cast< IParticleQueryObject * >( pParticles->m_ControlPoints[ nControlPointNumber ].m_pObject );
+	if ( pQueryObj )
+	{
+		switch ( pQueryObj->GetKind() )
+		{
+		case k_EParticleQueryObjectKindEntity: pMoveParent = ( CBaseEntity * )pQueryObj->GetInner(); break;
+		case k_EParticleQueryObjectKindPanel: pBMPQueryObj = ( CBMPParticleQueryObject * )pQueryObj->GetInner(); break;
+		}
+	}
 
 	auto lambdaStudioGetHitBoxInfo = [ & ]( const studiohdr_t *pStudioHdr, const matrix3x4_t *pmatBoneToWorld, int nHitBoxSet = 0 )
 	{
@@ -475,12 +500,14 @@ bool CParticleSystemQuery::IsPointInControllingObjectHitBox(
 	bool bSuccess = false;
 #ifndef GAME_DLL
 
-	EHANDLE *phMoveParent = reinterpret_cast<EHANDLE *> ( pParticles->m_ControlPoints[nControlPointNumber].m_pObject );
-	CBaseEntity *pMoveParent = NULL;
-	if ( phMoveParent )
+	CBaseEntity	*pMoveParent = NULL;
+
+	IParticleQueryObject *pQueryObj = reinterpret_cast< IParticleQueryObject * >( pParticles->m_ControlPoints[ nControlPointNumber ].m_pObject );
+	if ( pQueryObj && pQueryObj->GetKind() == k_EParticleQueryObjectKindEntity )
 	{
-		pMoveParent = *( phMoveParent );
+		pMoveParent = ( CBaseEntity * )pQueryObj->GetInner();
 	}
+
 	if ( pMoveParent )
 	{
 		s_BoneMutex.Lock();

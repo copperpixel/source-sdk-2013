@@ -216,8 +216,8 @@ void CNewParticleEffect::SetControlPointEntity( int nWhichPoint, CBaseEntity *pE
 
 	if ( pEntity )
 	{
-		CParticleCollection::SetControlPointObject( nWhichPoint, &m_hControlPointOwners[ nWhichPoint ] );
-		m_hControlPointOwners[ nWhichPoint ] = pEntity;
+		CParticleCollection::SetControlPointObject( nWhichPoint, &m_rgControlPoints[ nWhichPoint ] );
+		m_rgControlPoints[ nWhichPoint ].m_hOwner = pEntity;
 	}
 	else
 		CParticleCollection::SetControlPointObject( nWhichPoint, NULL );

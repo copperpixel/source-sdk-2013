@@ -14,18 +14,23 @@
 //-----------------------------------------------------------------------------
 // Particle data we want the particle system query to have.
 //-----------------------------------------------------------------------------
-struct BMPParticleQueryObject_t
+class CBMPParticleQueryObject : public IParticleQueryObject
 {
+public:
 	const studiohdr_t *m_pStudioHdr;
 	int                m_numbones;
 	matrix3x4_t       *m_pmatBoneToWorld;
 
-	BMPParticleQueryObject_t( void )
+	CBMPParticleQueryObject( void )
 	{
 		m_pStudioHdr = NULL;
 		m_numbones = -1;
 		m_pmatBoneToWorld = NULL;
 	}
+
+protected:
+	virtual EParticleQueryObjectKind GetKind( void ) { return k_EParticleQueryObjectKindPanel; }
+	virtual void					*GetInner( void ) { return this; } // In this case we're the containing object itself
 };
 
 //-----------------------------------------------------------------------------
@@ -265,7 +270,7 @@ protected:
 
 		bool				m_bIsUpdateToDate;
 		CParticleCollection	*m_pParticleSystem;
-		BMPParticleQueryObject_t m_BMPQueryObj;
+		CBMPParticleQueryObject m_BMPQueryObj;
 	};
 	CUtlVector< particle_data_t* > m_particleList;
 
